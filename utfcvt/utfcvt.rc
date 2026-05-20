@@ -1,0 +1,194 @@
+// Microsoft Visual C++ generated resource script.
+//
+#pragma code_page(65001)
+
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#ifndef APSTUDIO_INVOKED
+#include "targetver.h"
+#endif
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 非特定语言(默认值) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUD)
+LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_TRANSCODER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 304
+        TOPMARGIN, 7
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_TRANSCODER          ICON                    "utfcvt.ico"
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#ifndef APSTUDIO_INVOKED\r\n"
+    "#include ""targetver.h""\r\n"
+    "#endif\r\n"
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,5
+ PRODUCTVERSION 1,0,0,5
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040004b0"
+        BEGIN
+            VALUE "CompanyName", "绍峰网络工作室"
+            VALUE "FileDescription", "多字节转UNICODE"
+            VALUE "FileVersion", "1.0.0.5"
+            VALUE "InternalName", "utfcvt.exe"
+            VALUE "LegalCopyright", "Copyright (C) 2018"
+            VALUE "OriginalFilename", "utfcvt.exe"
+            VALUE "ProductName", "多字节转UNICODE"
+            VALUE "ProductVersion", "1.0.0.5"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x400, 1200
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_TRANSCODER DIALOGEX 0, 0, 311, 200
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "多字节转UNICODE"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "源目录：",IDC_LBL_FOLDER,7,10,52,8
+    EDITTEXT        IDC_SOURCE_FOLDER,59,7,192,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "浏览...(&B)",IDC_SOURCE_BROWSE,254,7,50,14
+    LTEXT           "源扩展名：",IDC_LBL_EXTENSION,7,31,52,8
+    EDITTEXT        IDC_SOURCE_EXTENSION,59,28,192,14,ES_AUTOHSCROLL
+    LTEXT           "排除目录：",IDC_LBL_EXCLUDES,7,51,52,8
+    EDITTEXT        IDC_SOURCE_EXCLUDES,59,48,192,14,ES_AUTOHSCROLL
+    LTEXT           "源编码：",IDC_LBL_SRC_ENC,7,70,52,8
+    COMBOBOX        IDC_SOURCE_ENCODING,59,68,120,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "扫描子目录",IDC_SUBDIR_SCANNING,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,188,70,63,10
+    PUSHBUTTON      "开始转换(&C)",IDC_SOURCE_CONVERT,254,184,50,14,WS_DISABLED
+    CONTROL         "",IDC_SOURCE_PROGRESS,"msctls_progress32",WS_BORDER,7,184,243,14
+    EDITTEXT        IDC_OUTPUT_LOGGER,7,112,297,65,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL
+    LTEXT           "目标编码：",IDC_LBL_TGT_ENC,7,89,52,8
+    COMBOBOX        IDC_TARGET_ENCODING,59,88,120,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "跳过UNICODE",IDC_TYPE_CASTING,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,188,90,63,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_TRANSCODER AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_TRANSCODER DLGINIT
+BEGIN
+    IDC_TARGET_ENCODING, 0x403, 4, 0
+0x2864, 0x0029, 
+    IDC_TARGET_ENCODING, 0x403, 6, 0
+0x6473, 0xa366, 0x00bb, 
+    0
+END
+
+#endif    // 非特定语言(默认值) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
