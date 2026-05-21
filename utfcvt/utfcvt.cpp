@@ -99,6 +99,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE instance,
 		}
 	}
 
+	LoadLibraryW(L"Msftedit.dll");
 	::OleInitialize(nullptr);
 	DialogBoxParam(instance, MAKEINTRESOURCE(IDD_TRANSCODER), NULL, MainDialog::WindowProc, (LPARAM)&config);
 	::OleUninitialize();

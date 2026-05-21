@@ -1,6 +1,7 @@
 #include "MainDialog.h"
 
 #include <CommCtrl.h>
+#include <Richedit.h>
 #include <shlobj_core.h>
 #include <shlwapi.h>
 #include <tchar.h>
@@ -12,6 +13,8 @@
 #include "Language.h"
 #include "Resource.h"
 #include "StringUtils.h"
+
+#define UM_APPEND_TEXT (WM_USER + 1)
 
 static Concurrency::cancellation_token_source convert_cts_;
 static Concurrency::task<void> convert_task_;
@@ -42,13 +45,13 @@ INT_PTR CALLBACK MainDialog::WindowProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp
 			drop_target_->Release();
 		}
 		PostQuitMessage(0);
-		break;
+		return (INT_PTR)TRUE;
 	}
-    case WM_CLOSE:
+	case WM_CLOSE:
 	{
-        DestroyWindow(dlg);
-        return TRUE;
-    }
+		DestroyWindow(dlg);
+		return (INT_PTR)TRUE;
+	}
 	// case WM_DROPFILES:
 	// {
 	// 	HDROP hdrop = (HDROP)wp;
@@ -65,37 +68,34 @@ INT_PTR CALLBACK MainDialog::WindowProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp
 	// 	break;
 	// }
 	case WM_COMMAND:
+	{
+		WORD id = LOWORD(wp);
+		HWND control = (HWND)lp;
 		if (HIWORD(wp) == EN_CHANGE)
 		{
-			if (LOWORD(wp) != IDC_SOURCE_FOLDER)
+			if (id != IDC_SOURCE_FOLDER)
 				break;
 
-			int length = GetWindowTextLength(HWND(lp)) + 1; // 终止符
+			int length = GetWindowTextLength(control) + 1; // 终止符
 			std::vector<TCHAR> text;
 			if (length > 0)
 			{
 				text.resize(length);
-				GetWindowText(HWND(lp), text.data(), length);
+				GetWindowText(control, text.data(), length);
 			}
 			EnableWindow(GetDlgItem(dlg, IDC_SOURCE_CONVERT), PathFileExists(text.data()));
 			return (INT_PTR)TRUE;
 		}
-		if (LOWORD(wp) == IDCANCEL)
-		{
-			EndDialog(dlg, LOWORD(wp));
-			return (INT_PTR)TRUE;
-		}
-		if (LOWORD(wp) == IDC_SOURCE_BROWSE)
-		{
-			OnBrowseClicked(dlg);
-			return (INT_PTR)TRUE;
-		}
-		if (LOWORD(wp) == IDC_SOURCE_CONVERT)
-		{
-			CvtConf config;
-			OnConvertClicked(dlg, config);
-			return (INT_PTR)TRUE;
-		}
+		OnCommand(dlg, id, control);
+		return (INT_PTR)TRUE;
+	}
+	case UM_APPEND_TEXT:
+	{
+		HWND logger = GetDlgItem(dlg, IDC_OUTPUT_LOGGER);
+		AppendText(logger, (LPCWSTR)wp, (COLORREF)lp);
+		return (INT_PTR)TRUE;
+	}
+	default:
 		break;
 	}
 	return (INT_PTR)FALSE;
@@ -123,6 +123,7 @@ void MainDialog::OnInit(HWND dlg, const CvtConf &config)
 	HWND decoding = GetDlgItem(dlg, IDC_TARGET_ENCODING);
 	HWND subdir = GetDlgItem(dlg, IDC_SUBDIR_SCANNING);
 	HWND casting = GetDlgItem(dlg, IDC_TYPE_CASTING);
+	HWND logger = GetDlgItem(dlg, IDC_OUTPUT_LOGGER);
 	bool auto_start = false;
 
 	if (config.command_line)
@@ -152,10 +153,57 @@ void MainDialog::OnInit(HWND dlg, const CvtConf &config)
 	ComboBox_SetCurSel(encoding, Config::CodePageToIndex(config.code_page));
 	ComboBox_SetCurSel(decoding, config.save_encode);
 
+	SendMessage(logger, EM_SETREADONLY, TRUE, 0); // 只读模式
+
 	convert_cts_.cancel();
 	if (auto_start)
 	{
 		OnConvertClicked(dlg, const_cast<CvtConf &>(config));
+	}
+}
+
+void MainDialog::OnCommand(HWND dlg, WORD id, HWND control)
+{
+	switch (id)
+	{
+	case IDCANCEL:
+	{
+		EndDialog(dlg, id);
+		break;
+	}
+	case IDC_SOURCE_BROWSE:
+	{
+		OnBrowseClicked(dlg);
+		break;
+	}
+	case IDC_SOURCE_CONVERT:
+	{
+		CvtConf config;
+		OnConvertClicked(dlg, config);
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+void MainDialog::AppendText(HWND rich, const std::wstring &text, COLORREF color, bool newline, bool scroll)
+{
+	CHARFORMAT2W cf{};
+	cf.cbSize = sizeof(cf);
+	cf.dwMask = CFM_COLOR;
+	cf.crTextColor = color;
+	SendMessage(rich, EM_SETSEL, -1, -1); // 移动光标到末尾
+	SendMessage(rich, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf); // 设置颜色
+	SendMessage(rich, EM_REPLACESEL, FALSE, (LPARAM)text.c_str()); // 插入文本
+
+	if (newline)
+	{
+		SendMessage(rich, EM_REPLACESEL, FALSE, (LPARAM)TEXT("\r\n")); // 插入换行符
+	}
+	if (scroll)
+	{
+		SendMessage(rich, EM_SCROLLCARET, 0, 0);// 滚动到底部
 	}
 }
 
@@ -314,13 +362,13 @@ void MainDialog::OnConvertClicked(HWND dlg, CvtConf config)
 									switch (ret)
 									{
 									case CvtResult::Success:
-										Edit_ReplaceSel(logger, (lang.GetDynamicStr( TEXT("ConvertSuccess"), TEXT("转换成功: ")) + text + TEXT("\r\n")).c_str());
+										SendMessage(dlg, UM_APPEND_TEXT, (WPARAM)(lang.GetDynamicStr( TEXT("ConvertSuccess"), TEXT("转换成功: ")) + text).c_str(), kGreenColor);
 										break;
 									case CvtResult::Ignore:
-										Edit_ReplaceSel(logger, (lang.GetDynamicStr( TEXT("ConvertIgnore"), TEXT("跳过文件: ")) + text + TEXT("\r\n")).c_str());
+										SendMessage(dlg, UM_APPEND_TEXT, (WPARAM)(lang.GetDynamicStr( TEXT("ConvertIgnore"), TEXT("跳过文件: ")) + text).c_str(), kOrangeColor);
 										break;
 									case CvtResult::Invalid:
-										Edit_ReplaceSel(logger, (lang.GetDynamicStr( TEXT("ConvertInvalid"), TEXT("无效编码: ")) + text + TEXT("\r\n")).c_str());
+										SendMessage(dlg, UM_APPEND_TEXT, (WPARAM)(lang.GetDynamicStr( TEXT("ConvertInvalid"), TEXT("无效编码: ")) + text).c_str(), kRedColor);
 										break;
 									default:
 										break;

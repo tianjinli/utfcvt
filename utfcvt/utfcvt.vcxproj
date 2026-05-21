@@ -162,7 +162,6 @@
     <ClInclude Include="MainDialog.h" />
     <ClInclude Include="SimpleIni.h" />
     <ClInclude Include="SystemUtils.h" />
-    <ClInclude Include="utfcvt.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="StringUtils.h" />
   </ItemGroup>

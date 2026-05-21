@@ -90,8 +90,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,5
- PRODUCTVERSION 1,0,0,5
+ FILEVERSION 1,0,0,7
+ PRODUCTVERSION 1,0,0,7
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -108,12 +108,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "绍峰网络工作室"
             VALUE "FileDescription", "多字节转UNICODE"
-            VALUE "FileVersion", "1.0.0.5"
+            VALUE "FileVersion", "1.0.0.7"
             VALUE "InternalName", "utfcvt.exe"
             VALUE "LegalCopyright", "Copyright (C) 2018"
             VALUE "OriginalFilename", "utfcvt.exe"
             VALUE "ProductName", "多字节转UNICODE"
-            VALUE "ProductVersion", "1.0.0.5"
+            VALUE "ProductVersion", "1.0.0.7"
         END
     END
     BLOCK "VarFileInfo"
@@ -143,12 +143,12 @@ BEGIN
     LTEXT           "源编码：",IDC_LBL_SRC_ENC,7,70,52,8
     COMBOBOX        IDC_SOURCE_ENCODING,59,68,120,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL         "扫描子目录",IDC_SUBDIR_SCANNING,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,188,70,63,10
-    PUSHBUTTON      "开始转换(&C)",IDC_SOURCE_CONVERT,254,184,50,14,WS_DISABLED
-    CONTROL         "",IDC_SOURCE_PROGRESS,"msctls_progress32",WS_BORDER,7,184,243,14
-    EDITTEXT        IDC_OUTPUT_LOGGER,7,112,297,65,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL
     LTEXT           "目标编码：",IDC_LBL_TGT_ENC,7,89,52,8
     COMBOBOX        IDC_TARGET_ENCODING,59,88,120,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL         "跳过UNICODE",IDC_TYPE_CASTING,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,188,90,63,10
+    CONTROL         "",IDC_OUTPUT_LOGGER,"RichEdit50W",WS_VSCROLL | 0x4,7,106,297,73
+    CONTROL         "",IDC_SOURCE_PROGRESS,"msctls_progress32",WS_BORDER,7,184,243,14
+    PUSHBUTTON      "开始转换(&C)",IDC_SOURCE_CONVERT,254,184,50,14,WS_DISABLED
 END
 
 
