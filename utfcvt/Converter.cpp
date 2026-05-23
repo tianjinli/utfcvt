@@ -203,6 +203,31 @@ std::generator<std::wstring> Converter::GetFiles(const CvtConf &config)
 	}
 }
 
+std::generator<std::filesystem::path> Converter::GetFiles(const std::filesystem::path &root, bool recursive)
+{
+    namespace fs = std::filesystem;
+
+    if (!fs::exists(root) || !fs::is_directory(root))
+        co_return;
+
+    if (recursive)
+    {
+        for (const auto& entry : fs::recursive_directory_iterator(root))
+        {
+            if (entry.is_regular_file())
+                co_yield entry.path();
+        }
+    }
+    else
+    {
+        for (const auto& entry : fs::directory_iterator(root))
+        {
+            if (entry.is_regular_file())
+                co_yield entry.path();
+        }
+    }
+}
+
 std::generator<std::wstring> Converter::EnumFolders(const std::wstring &folder)
 {
 	_tfinddata64_t find_data;

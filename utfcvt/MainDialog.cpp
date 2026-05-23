@@ -19,6 +19,9 @@
 static Concurrency::cancellation_token_source convert_cts_;
 static Concurrency::task<void> convert_task_;
 
+static Concurrency::cancellation_token_source guess_cts_;
+static Concurrency::task<void> guess_task_;
+
 static FolderDropTarget *drop_target_ = nullptr;
 
 INT_PTR CALLBACK MainDialog::WindowProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
@@ -71,19 +74,49 @@ INT_PTR CALLBACK MainDialog::WindowProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp
 	{
 		WORD id = LOWORD(wp);
 		HWND control = (HWND)lp;
-		if (HIWORD(wp) == EN_CHANGE)
+		auto get_text = [dlg](uint32_t id)
 		{
-			if (id != IDC_SOURCE_FOLDER)
-				break;
-
+			auto control = GetDlgItem(dlg, id);
 			int length = GetWindowTextLength(control) + 1; // 终止符
-			std::vector<TCHAR> text;
+			std::vector<wchar_t> text;
 			if (length > 0)
 			{
 				text.resize(length);
 				GetWindowText(control, text.data(), length);
+				return std::wstring((const wchar_t *)text.data());
 			}
-			EnableWindow(GetDlgItem(dlg, IDC_SOURCE_CONVERT), PathFileExists(text.data()));
+			return std::wstring();
+		};
+		if (HIWORD(wp) == EN_CHANGE)
+		{
+			if (id == IDC_GUESS_COUNT)
+			{
+				auto text = get_text(IDC_SOURCE_FOLDER);
+				if (!text.empty())
+				{
+					OnGuessClicked(dlg, text);
+				}
+				return (INT_PTR)TRUE;
+			}
+			else if (id == IDC_SOURCE_FOLDER)
+			{
+				auto text = get_text(IDC_SOURCE_FOLDER);
+				if (!text.empty())
+				{
+					OnGuessClicked(dlg, text);
+				}
+
+				EnableWindow(GetDlgItem(dlg, IDC_SOURCE_CONVERT), PathFileExists(text.data()));
+				return (INT_PTR)TRUE;
+			}
+			break;
+		}
+		if (id == IDC_SUBDIR_SCANNING)
+		{
+			auto text = get_text(IDC_SOURCE_FOLDER);
+			if (text.empty())
+				break;
+			OnGuessClicked(dlg, text);
 			return (INT_PTR)TRUE;
 		}
 		OnCommand(dlg, id, control);
@@ -106,13 +139,13 @@ void MainDialog::OnInit(HWND dlg, const CvtConf &config)
 	// 国际化支持
 	auto &lang = Language::GetInstance();
 	SetWindowText(dlg, lang.GetStaticStr(TEXT("Title"), TEXT("多字节转UNICODE")).c_str());
-	SetWindowText(GetDlgItem(dlg, IDC_LBL_FOLDER), lang.GetStaticStr(TEXT("Folder"), TEXT("源目录：")).c_str());
+	SetWindowText(GetDlgItem(dlg, IDS_SOURCE_FOLDER), lang.GetStaticStr(TEXT("Folder"), TEXT("源目录：")).c_str());
 	SetWindowText(GetDlgItem(dlg, IDC_SOURCE_BROWSE), lang.GetStaticStr(TEXT("Browse"), TEXT("浏览...(&B)")).c_str());
-	SetWindowText(GetDlgItem(dlg, IDC_LBL_EXTENSION), lang.GetStaticStr(TEXT("Extension"), TEXT("源扩展名：")).c_str());
-	SetWindowText(GetDlgItem(dlg, IDC_LBL_EXCLUDES), lang.GetStaticStr(TEXT("Exclude"), TEXT("排除目录：")).c_str());
-	SetWindowText(GetDlgItem(dlg, IDC_LBL_SRC_ENC), lang.GetStaticStr(TEXT("SrcEncoding"), TEXT("源编码：")).c_str());
+	SetWindowText(GetDlgItem(dlg, IDS_SOURCE_EXTENSION), lang.GetStaticStr(TEXT("Extension"), TEXT("源扩展名：")).c_str());
+	SetWindowText(GetDlgItem(dlg, IDS_SOURCE_EXCLUDES), lang.GetStaticStr(TEXT("Exclude"), TEXT("排除目录：")).c_str());
+	SetWindowText(GetDlgItem(dlg, IDS_SOURCE_ENCODING), lang.GetStaticStr(TEXT("SrcEncoding"), TEXT("源编码：")).c_str());
 	SetWindowText(GetDlgItem(dlg, IDC_SUBDIR_SCANNING), lang.GetStaticStr(TEXT("SubDirScan"), TEXT("扫描子目录")).c_str());
-	SetWindowText(GetDlgItem(dlg, IDC_LBL_TGT_ENC), lang.GetStaticStr(TEXT("TgtEncoding"), TEXT("目标编码：")).c_str());
+	SetWindowText(GetDlgItem(dlg, IDS_TARGET_ENCODING), lang.GetStaticStr(TEXT("TgtEncoding"), TEXT("目标编码：")).c_str());
 	SetWindowText(GetDlgItem(dlg, IDC_TYPE_CASTING), lang.GetStaticStr(TEXT("SkipUnicode"), TEXT("跳过UNICODE")).c_str());
 	SetWindowText(GetDlgItem(dlg, IDC_SOURCE_CONVERT), lang.GetStaticStr(TEXT("StartConvert"), TEXT("开始转换(&C)")).c_str());
 
@@ -124,6 +157,7 @@ void MainDialog::OnInit(HWND dlg, const CvtConf &config)
 	HWND subdir = GetDlgItem(dlg, IDC_SUBDIR_SCANNING);
 	HWND casting = GetDlgItem(dlg, IDC_TYPE_CASTING);
 	HWND logger = GetDlgItem(dlg, IDC_OUTPUT_LOGGER);
+	HWND guessing = GetDlgItem(dlg, IDC_GUESS_COUNT);
 	bool auto_start = false;
 
 	if (config.command_line)
@@ -152,6 +186,7 @@ void MainDialog::OnInit(HWND dlg, const CvtConf &config)
 
 	ComboBox_SetCurSel(encoding, Config::CodePageToIndex(config.code_page));
 	ComboBox_SetCurSel(decoding, config.save_encode);
+	SetWindowText(guessing, std::to_wstring(config.guess_count).c_str());
 
 	SendMessage(logger, EM_SETREADONLY, TRUE, 0); // 只读模式
 
@@ -187,15 +222,15 @@ void MainDialog::OnCommand(HWND dlg, WORD id, HWND control)
 	}
 }
 
-void MainDialog::AppendText(HWND rich, const std::wstring &text, COLORREF color, bool newline, bool scroll)
+void MainDialog::AppendText(HWND rich, std::wstring_view text, COLORREF color, bool newline, bool scroll)
 {
 	CHARFORMAT2W cf{};
 	cf.cbSize = sizeof(cf);
 	cf.dwMask = CFM_COLOR;
 	cf.crTextColor = color;
-	SendMessage(rich, EM_SETSEL, -1, -1); // 移动光标到末尾
+	SendMessage(rich, EM_SETSEL, -1, -1);							 // 移动光标到末尾
 	SendMessage(rich, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf); // 设置颜色
-	SendMessage(rich, EM_REPLACESEL, FALSE, (LPARAM)text.c_str()); // 插入文本
+	SendMessage(rich, EM_REPLACESEL, FALSE, (LPARAM)text.data());	 // 插入文本
 
 	if (newline)
 	{
@@ -203,7 +238,7 @@ void MainDialog::AppendText(HWND rich, const std::wstring &text, COLORREF color,
 	}
 	if (scroll)
 	{
-		SendMessage(rich, EM_SCROLLCARET, 0, 0);// 滚动到底部
+		SendMessage(rich, EM_SCROLLCARET, 0, 0); // 滚动到底部
 	}
 }
 
@@ -273,6 +308,7 @@ void MainDialog::OnConvertClicked(HWND dlg, CvtConf config)
 		HWND subdir = GetDlgItem(dlg, IDC_SUBDIR_SCANNING);
 		HWND decoding = GetDlgItem(dlg, IDC_TARGET_ENCODING);
 		HWND casting = GetDlgItem(dlg, IDC_TYPE_CASTING);
+		HWND guessing = GetDlgItem(dlg, IDC_GUESS_COUNT);
 
 		int length = GetWindowTextLength(folder) + 1;
 		std::vector<TCHAR> text;
@@ -295,8 +331,15 @@ void MainDialog::OnConvertClicked(HWND dlg, CvtConf config)
 			text.resize(length);
 			GetWindowText(exclude, text.data(), length);
 		}
-		config.code_page = Config::IndexToCodePage(ComboBox_GetCurSel(encoding));
 		config.excludes = StringUtils::Split(text.data(), TEXT('\x7C'));
+		length = GetWindowTextLength(guessing) + 1;
+		if (length > 0)
+		{
+			text.resize(length);
+			GetWindowText(guessing, text.data(), length);
+		}
+		config.guess_count = std::stoi(text.data());
+		config.code_page = Config::IndexToCodePage(ComboBox_GetCurSel(encoding));
 		config.scan_subfolders = (Button_GetCheck(subdir) == BST_CHECKED);
 		config.save_encode = SaveEncode(ComboBox_GetCurSel(decoding));
 		config.skip_unicode = (Button_GetCheck(casting) == BST_CHECKED);
@@ -362,13 +405,13 @@ void MainDialog::OnConvertClicked(HWND dlg, CvtConf config)
 									switch (ret)
 									{
 									case CvtResult::Success:
-										SendMessage(dlg, UM_APPEND_TEXT, (WPARAM)(lang.GetDynamicStr( TEXT("ConvertSuccess"), TEXT("转换成功: ")) + text).c_str(), kGreenColor);
+										SendMessage(dlg, UM_APPEND_TEXT, (WPARAM)(lang.GetDynamicStr( TEXT("ConvertSuccess"), TEXT("转换成功")) + TEXT(" -> ") + text).c_str(), kGreenColor);
 										break;
 									case CvtResult::Ignore:
-										SendMessage(dlg, UM_APPEND_TEXT, (WPARAM)(lang.GetDynamicStr( TEXT("ConvertIgnore"), TEXT("跳过文件: ")) + text).c_str(), kOrangeColor);
+										SendMessage(dlg, UM_APPEND_TEXT, (WPARAM)(lang.GetDynamicStr( TEXT("ConvertIgnore"), TEXT("跳过文件")) + TEXT(" -> ") + text).c_str(), kOrangeColor);
 										break;
 									case CvtResult::Invalid:
-										SendMessage(dlg, UM_APPEND_TEXT, (WPARAM)(lang.GetDynamicStr( TEXT("ConvertInvalid"), TEXT("无效编码: ")) + text).c_str(), kRedColor);
+										SendMessage(dlg, UM_APPEND_TEXT, (WPARAM)(lang.GetDynamicStr( TEXT("ConvertInvalid"), TEXT("无效编码")) + TEXT(" -> ") + text).c_str(), kRedColor);
 										break;
 									default:
 										break;
@@ -394,12 +437,56 @@ void MainDialog::OnConvertClicked(HWND dlg, CvtConf config)
 			} });
 }
 
-bool MainDialog::OpenFolder(const std::wstring &folder)
+void MainDialog::OnGuessClicked(HWND dlg, std::wstring_view folder)
+{
+	int guess_count = GetDlgItemInt(dlg, IDC_GUESS_COUNT, nullptr, 0);
+	if (guess_count <= 0 || !PathFileExists(folder.data()))
+	{
+		return;
+	}
+
+	if (guess_cts_.get_token().is_canceled())
+	{
+		guess_cts_ = Concurrency::cancellation_token_source();
+	}
+	else
+	{
+		guess_cts_.cancel();
+	}
+
+	// Read whether to scan subdirectories on UI thread first
+	HWND subdir = GetDlgItem(dlg, IDC_SUBDIR_SCANNING);
+	bool scan_subdirs = (Button_GetCheck(subdir) == BST_CHECKED);
+
+	guess_task_ = Concurrency::create_task([guess_count, dlg, folder = std::filesystem::path(folder), scan_subdirs]()
+										   {
+		std::unordered_map<std::wstring, int> exts_count;
+		for (auto&& path : Converter::GetFiles(folder, scan_subdirs))
+		{
+			exts_count[path.extension()]++;
+		}
+
+		std::vector<std::wstring> exts_vec;
+		exts_vec.reserve(exts_count.size());
+		for (auto& [ext, count] : exts_count)
+		{
+			if (count >= guess_count)
+			{
+				exts_vec.emplace_back(ext);
+			}
+		}
+		// 按 count 从大到小排序
+		std::ranges::sort(exts_vec, [&](auto const &a, auto const &b)
+						  { return exts_count[a] > exts_count[b]; });
+		SetWindowText(GetDlgItem(dlg, IDC_SOURCE_EXTENSION), StringUtils::Join(exts_vec, TEXT("|")).c_str()); });
+}
+
+bool MainDialog::OpenFolder(std::wstring_view folder)
 {
 	if (SUCCEEDED(CoInitializeEx(nullptr, 0)))
 	{
 		PIDLIST_ABSOLUTE pidl;
-		if (SUCCEEDED(SHParseDisplayName(folder.c_str(), nullptr, &pidl, 0, nullptr)))
+		if (SUCCEEDED(SHParseDisplayName(folder.data(), nullptr, &pidl, 0, nullptr)))
 		{
 			ITEMIDLIST idl{};
 			LPCITEMIDLIST apidl[] = {&idl};

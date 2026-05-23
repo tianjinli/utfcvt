@@ -40,6 +40,7 @@ struct CvtConf
 	SaveEncode save_encode{SaveEncode::Utf8}; // 保存编码
 	bool skip_unicode{true};				  // 是否跳过UNICODE(即遇到UNICODE不转换)
 	bool command_line{false};				  // 是否来自命令行
+	uint32_t guess_count{1};				  // 扩展名个数
 	std::wstring language;					  // 界面语言
 };
 

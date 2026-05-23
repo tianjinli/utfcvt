@@ -51,6 +51,7 @@ bool Config::LoadFromIni(CvtConf &config)
 	config.scan_subfolders = ini_handler.GetBoolValue(kRootSection, TEXT("scan_subfolders"), true);
 	config.save_encode = SaveEncode(ini_handler.GetLongValue(kRootSection, TEXT("save_encode"), static_cast<int>(SaveEncode::Utf8)));
 	config.skip_unicode = ini_handler.GetBoolValue(kRootSection, TEXT("skip_unicode"), false);
+	config.guess_count = ini_handler.GetLongValue(kRootSection, TEXT("guess_count"), 0);
 	config.language = ini_handler.GetValue(kRootSection, TEXT("language"), TEXT("zh-CN"));
 	return true;
 }
@@ -70,6 +71,7 @@ bool Config::SaveToIni(const CvtConf &config)
 	ini_handler.SetBoolValue(kRootSection, TEXT("scan_subfolders"), config.scan_subfolders);
 	ini_handler.SetLongValue(kRootSection, TEXT("save_encode"), static_cast<int>(config.save_encode));
 	ini_handler.SetBoolValue(kRootSection, TEXT("skip_unicode"), config.skip_unicode);
+	ini_handler.SetLongValue(kRootSection, TEXT("guess_count"), config.guess_count);
 	ini_handler.SetValue(kRootSection, TEXT("language"), config.language.c_str());
 	auto config_path = SystemUtils::GetExecutableFolder() / kFileName;
 	return ini_handler.SaveFile(config_path.c_str()) != SI_OK;
